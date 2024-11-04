@@ -19,7 +19,7 @@ Working on the preprocessing pipeline for Non-human Primates, please see [`NonHu
         </td>
         <td align="center">
             <img src="https://github.com/user-attachments/assets/9899b7dc-6b38-4ddc-a063-02e5bbb91e30" width="320">
-            <br><em>Figure 2: Mask obtained using DeepNet</em>
+            <br><em>Figure 2: DeepNet mask</em>
         </td>
         <td align="center">
             <img src="https://github.com/user-attachments/assets/268abedc-0142-40fa-9309-fe5c65931e37" width="320">
