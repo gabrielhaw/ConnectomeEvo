@@ -1,14 +1,29 @@
 # Exploring the relationship between neural network complexity and distance from conserved evolutionary regions
-This repository contains all the code used in my MSc thesis, where I investigate the evolutionary trajectory of the primate connectome. Any code adapted from external sources has been appropriately referenced.
+This repository contains all the code used in my MSc thesis, where I try to investigate the evolutionary trajectory of the primate connectome. Any code adapted from external sources has been appropriately referenced.
 
 ## Current Results 
 Working on the preprocessing pipeline for Non-human Primates:
-1. non-local means filtering (DenoiseImageinANTs)
-2. bias field correction(N4BiasFieldCorrectioninANTs)
-3. brain extraction using DeepNet (see References)
-4. rough alignment to JunaChimp template, ensuring adequate orientation for FreeSurfer
+1. non-local means filtering (DenoiseImageinANTs).
+2. bias field correction(N4BiasFieldCorrectioninANTs).
+3. brain extraction using DeepNet.
+4. rough alignment to JunaChimp template, ensuring adequate orientation for FreeSurfer.
 
-
+<table>
+    <tr>
+        <td align="center">
+            <img src="https://github.com/user-attachments/assets/604dd9d4-3504-4c5d-9a2f-72a849ac89c3" width="320">
+            <br><em>Figure 1: Original T1w image</em>
+        </td>
+        <td align="center">
+            <img src="https://github.com/user-attachments/assets/9899b7dc-6b38-4ddc-a063-02e5bbb91e30" width="320">
+            <br><em>Figure 2: Mask obtained using DeepNet</em>
+        </td>
+        <td align="center">
+            <img src="https://github.com/user-attachments/assets/268abedc-0142-40fa-9309-fe5c65931e37" width="320">
+            <br><em>Figure 3: Extracted brain</em>
+        </td>
+    </tr>
+</table>
 
 
 ## References
