@@ -7,7 +7,7 @@ The representative sample of adult chimpanzee 3.0T MRI scans (5 males, 5 females
 ## Current Results 
 Working on the preprocessing pipeline for Non-human Primates, please see [`NonHumanPrimate/PreFreeSurfer`](NonHumanPrimate/PreFreeSurfer) for scripts.
 1. non-local means filtering (DenoiseImage, ANTs).
-2. bias field correction(N4BiasFieldCorrection, ANTs).
+2. bias field correction (N4BiasFieldCorrection, ANTs).
 3. brain extraction using DeepNet.
 4. rough alignment to JunaChimp template, ensuring adequate orientation for FreeSurfer.
 
