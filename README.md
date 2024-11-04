@@ -13,3 +13,6 @@ Working on the preprocessing pipeline for Non-human Primates:
 
 ## References
 - Wang, X., Li, X.-H., Cho, J.W., Russ, B.E., Rajamani, N., Omelchenko, A., Ai, L., Korchmaros, A., Sawiak, S., Benn, R.A., Garcia-Saldivar, P., Wang, Z., Kalin, N.H., Schroeder, C.E., Craddock, R.C., Fox, A.S., Evans, A.C., Messinger, A., & Xu, T. (2021). U-net model for brain extraction: Trained on humans for transfer to non-human primates. *NeuroImage*, *Volume*(Issue), Page range. [PDF available here](https://foxlab.ucdavis.edu/publications/WangXu_Neuroimage_2021.pdf).
+
+- Vickery, S., Hopkins, W. D., Sherwood, C. C., Schapiro, S. J., Latzman, R. D., Caspers, S., Gaser, C., Eickhoff, S. B., Dahnke, R., & Hoffstaedter, F. (2021). Chimpanzee brain morphometry utilizing standardized MRI preprocessing and macroanatomical annotations. <i>eLife</i>. <a href="https://elifesciences.org/articles/60136">https://elifesciences.org/articles/60136</a>
+
