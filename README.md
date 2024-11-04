@@ -5,6 +5,6 @@ This repository contains all the code used in my MSc thesis, where I investigate
 
 Here's a paragraph with HTML inside it.
 
-<div style="background-color: lightblue; padding: 10px; border-radius: 5px;">
-    This is a custom-styled box in HTML!
+<div>
+    This is a basic HTML box without inline styles.
 </div>
