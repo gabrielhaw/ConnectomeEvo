@@ -14,10 +14,12 @@ template_file="/Users/gabrielhaw/Downloads/Working/Juna.Chimp_05mm/Juna_Chimp_T1
 echo "Template File: $template_file"
 
 
-mkdir -p "${output_dir}/pre_masks"
+mkdir -p "${output_dir}/pre_mask"
 mkdir -p "${output_dir}/brain_extracted"
+mkdir -p "${output_dir}/aligned"
 
-for subject_file in "${input_dir}"/test.nii; do 
+
+for subject_file in "${input_dir}"/*_Christa.nii; do 
     subject_name=$(basename "$subject_file" .nii)
     img="$subject_file"
     echo "Processing Subject: $subject_name"
@@ -27,13 +29,13 @@ for subject_file in "${input_dir}"/test.nii; do
     N4BiasFieldCorrection -d 3 -i "$img" -o "$img"
 
     # generate brain mask
-    python3 background_removal.py "$img" "${output_dir}"
+    python3 background_removal.py "$img" "${output_dir}/pre_mask/"
 
     # extract the brain 
-    fslmaths "$img" -mas "${output_dir}/${subject_name}_pre_mask.nii.gz/${subject_name}_pre_mask.nii.gz" "${output_dir}/brain_extracted/${subject_name}.nii.gz"
+    fslmaths "$img" -mas "${output_dir}/pre_mask/${subject_name}_pre_mask.nii.gz" "${output_dir}/brain_extracted/${subject_name}.nii.gz"
 
     # rough alignment to template orientation
-    flirt -in "${output_dir}/brain_extracted/${subject_name}.nii.gz" -ref "$template_file" -out "${output_dir}/${subject_name}.aligned.nii.gz" -cost mutualinfo -dof 6
+    flirt -in "${output_dir}/brain_extracted/${subject_name}.nii.gz" -ref "$template_file" -out "${output_dir}/aligned/${subject_name}.aligned.nii.gz" -cost mutualinfo -dof 6
 
 done
 
