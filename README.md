@@ -5,7 +5,7 @@ This repository contains all the code used in my MSc thesis, where I try to inve
 The representative sample of adult chimpanzee 3.0T MRI scans (5 males, 5 females; mean age 21.6 years, standard deviation ± 8.2) was provided by the <a href="https://www.chimpanzeebrain.org/mri-datasets-for-direct-download">National Chimpanzee Brain Resource</a>.
 
 ## Current Results 
-Working on the preprocessing pipeline for Non-human Primates:
+Working on the preprocessing pipeline for Non-human Primates, please see [`NonHumanPrimate/PreFreeSurfer`](NonHumanPrimate/PreFreeSurfer) for scripts.
 1. non-local means filtering (DenoiseImage, ANTs).
 2. bias field correction(N4BiasFieldCorrection, ANTs).
 3. brain extraction using DeepNet.
