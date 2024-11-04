@@ -8,3 +8,5 @@ Here's a paragraph with HTML inside it.
 <div>
     This is a basic HTML box without inline styles.
 </div>
+
+![alt text](http://url/to/img.png)
