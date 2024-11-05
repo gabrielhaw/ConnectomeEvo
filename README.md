@@ -1,5 +1,5 @@
 # Exploring the relationship between neural network complexity and distance from conserved evolutionary regions
-This repository contains all the code used in my MSc thesis, where I try to investigate the evolutionary trajectory of the primate connectome. Any code adapted from external sources has been appropriately referenced.
+This repository contains all the code used in my MSc thesis, where I try to investigate the evolutionary trajectory of the primate connectome. 
 
 ## Non-human primate data
 The representative sample of adult chimpanzee 3.0T MRI scans (5 males, 5 females; mean age 21.6 years, standard deviation ± 8.2) was provided by the <a href="https://www.chimpanzeebrain.org/mri-datasets-for-direct-download">National Chimpanzee Brain Resource</a>.
