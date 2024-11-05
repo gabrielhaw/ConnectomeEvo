@@ -19,7 +19,7 @@ mkdir -p "${output_dir}/brain_extracted"
 mkdir -p "${output_dir}/aligned"
 
 
-for subject_file in "${input_dir}"/*_Christa.nii; do 
+for subject_file in "${input_dir}"/*.nii; do 
     subject_name=$(basename "$subject_file" .nii)
     img="$subject_file"
     echo "Processing Subject: $subject_name"
