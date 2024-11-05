@@ -21,6 +21,12 @@ for subject_file in "$input_dir"/*_Christa.aligned.nii.gz; do
     img="$subject_file"
 
     #mri_convert "$img" "${input_dir}/formatted/${subject_name}.mgz"
-    recon-all -motioncor -s "$subject_name" -i "${input_dir}/formatted/${subject_name}.mgz" -hires
+    #recon-all -motioncor -s "$subject_name" -i "${input_dir}/formatted/${subject_name}.mgz" -hires
     
+    # already performed bias correction but need a nu.mgz file for normalisation
+    #cp "${SUBJECTS_DIR}/$subject_name/mri/orig.mgz" "${SUBJECTS_DIR}/$subject_name/mri/nu.mgz"
+
+    #recon-all -s "$subject_name" -autorecon1 -nonuintensitycor -talairach -notal-check -hires -normalization -noskullstrip
+    recon-all -s "$subject_name" -autorecon2 -normneck -noskull-lta
+
 done 
