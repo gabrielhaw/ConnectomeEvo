@@ -9,7 +9,7 @@ Working on the preprocessing pipeline for Non-human Primates, please see [`NonHu
 1. non-local means filtering (DenoiseImage, ANTs).
 2. bias field correction (N4BiasFieldCorrection, ANTs).
 3. brain extraction using DeepNet.
-4. rough alignment to JunaChimp template, ensuring adequate orientation for FreeSurfer.
+4. rough alignment to JunaChimp template (FLIRT), ensuring adequate orientation for FreeSurfer.
 
 <table>
     <tr>
