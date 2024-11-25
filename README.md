@@ -14,15 +14,15 @@ Working on the preprocessing pipeline for Non-human Primates, please see [`NonHu
 <table>
     <tr>
         <td align="center">
-            <img src="https://github.com/user-attachments/assets/a014589e-05f0-463d-8477-b6a0b2d4733f" width="320">
+            <img src="https://github.com/user-attachments/assets/a014589e-05f0-463d-8477-b6a0b2d4733f" width="290">
             <br><em>Figure 1: Original T1w image</em>
         </td>
         <td align="center">
-            <img src="https://github.com/user-attachments/assets/635fd21a-e10b-4d08-908f-be0abd67e9e2" width="320">
+            <img src="https://github.com/user-attachments/assets/635fd21a-e10b-4d08-908f-be0abd67e9e2" width="290">
             <br><em>Figure 2: DeepNet mask</em>
         </td>
         <td align="center">
-            <img src="https://github.com/user-attachments/assets/5fa91a96-47dc-4094-8a4d-71e3c4d11420" width="320">
+            <img src="https://github.com/user-attachments/assets/5fa91a96-47dc-4094-8a4d-71e3c4d11420" width="290">
             <br><em>Figure 3: Extracted brain</em>
         </td>
     </tr>
