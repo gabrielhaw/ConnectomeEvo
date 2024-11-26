@@ -9,7 +9,7 @@ fi
 
 input_dir="$1"
 output_dir="$2"
-template_file="/Users/gabrielhaw/Downloads/Working/Juna.Chimp_05mm/Juna_Chimp_T1_05mm_skull_stripped.nii"
+template_brain="/Users/gabrielhaw/Downloads/Working/Juna.Chimp_05mm/Juna_Chimp_T1_05mm_skull_stripped.nii.gz"
 clean_up=0
 
 if [[ "$3" == "-c" ]]; then
@@ -19,45 +19,52 @@ else
     echo "no clean up of intermediate files"
 fi
 
-echo "template file: $template_file"
+echo "template file: $template_brain"
 
-mkdir -p "${output_dir}/aligned"
-mkdir -p "${output_dir}/aligned/matrices"
-mkdir -p "${output_dir}/intermediate/brain_extracted"
-mkdir -p "${output_dir}/intermediate/pre_mask"
-mkdir -p "${output_dir}/intermediate/corrected"
+mkdir -p "${output_dir}/final"
+mkdir -p "${output_dir}/intermediate"
 
 for subject_file in "${input_dir}"/*.nii; do 
     subject_name=$(basename "$subject_file" .nii)
     img="$subject_file"
-    echo "processing subject: $subject_name"
+    echo "Processing subject: $subject_name"
 
-    # image correction steps
-    corrected_img="${output_dir}/intermediate/corrected/${subject_name}.nii.gz"
+    corrected_img="${output_dir}/intermediate/${subject_name}.nii.gz"
+    resampled_img="${output_dir}/intermediate/${subject_name}.nii.gz"
+
+    # denoising, bias correction, and resampling
     DenoiseImage -d 3 -i "$img" -o "$corrected_img"
     N4BiasFieldCorrection -d 3 -i "$corrected_img" -o "$corrected_img"
-    python3 normalise.py "$corrected_img" "${output_dir}/intermediate/corrected/"
-    SmoothImage 3 "$corrected_img" 0.4 "$corrected_img"    
-    
-    # generate brain mask
-    python3 background_removal.py "$corrected_img" "${output_dir}/intermediate/pre_mask"
+    ResampleImage 3 "$corrected_img" "$resampled_img" 0.5x0.5x0.5 0
 
-    # extract the brain 
-    brain_extracted="${output_dir}/intermediate/brain_extracted/${subject_name}.nii.gz"
-    fslmaths "$corrected_img" -mas "${output_dir}/intermediate/pre_mask/${subject_name}_pre_mask.nii.gz" "$brain_extracted"
+    # smoothing and normalization
+    SmoothImage 3 "$resampled_img" 0.4 "$resampled_img"
+    python3 normalise.py "$resampled_img" "${output_dir}/intermediate/"
 
-    # affine alignment to template orientation
-    affine_output="${output_dir}/aligned/${subject_name}.nii.gz"
-    affine_matrix="${output_dir}/aligned/matrices/${subject_name}_affine_matrix.mat"
-    affine_log="${output_dir}/aligned/matrices/${subject_name}_affine_to_Juna_Chimp_T1_05mm_skull_stripped.log"
-    flirt -in "$brain_extracted" -ref "$template_file" -out "$affine_output" -omat "$affine_matrix" -cost mutualinfo -dof 7
+    # generate brain mask and extract brain
+    python3 background_removal.py "$resampled_img" "${output_dir}/intermediate/"
+    mask="${output_dir}/intermediate/${subject_name}_pre_mask.nii.gz"
+    brain_extracted="${output_dir}/intermediate/${subject_name}_extracted.nii.gz"
+    fslmaths "$resampled_img" -mas "$mask" "$brain_extracted"
+
+    # final alignment to brain template
+    reg_output="${output_dir}/final/${subject_name}_aligned.nii.gz"
+    reg_matrix="${output_dir}/intermediate/${subject_name}_reg_matrix.mat"
+    flirt -in "$brain_extracted" -ref "$template_brain" -out "$reg_output" -omat "$reg_matrix" -cost corratio -dof 6
+
+    # cleanup intermediate files
+    if [ "$clean_up" -eq 1 ]; then
+        echo "Cleaning up files..."
+        rm -rf "$corrected_img" "$resampled_img" "$brain_extracted" "$mask"
+    fi
 
 done
+
 
 # optional cleanup of directories 
 if [ "$clean_up" -eq 1 ]; then
     echo "cleaning up folders..."
-    rm -rf "${output_dir}/intermediate/" 
+    rm -rf "${output_dir}/intermediate"  "${output_dir}/corrected"
 fi
 
 echo "Processing completed for all subjects."

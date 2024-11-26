@@ -1,5 +1,5 @@
 #!/bin/bash
-# script implementing steps in freesurfer for NHPs
+# script implementing steps in freesurfer for NHPs (parallel)
 ##########################################################
 
 if [ -z "$1" ] || [ -z "$2" ]; then  
@@ -12,32 +12,37 @@ output_dir="$2"
 
 mkdir -p "${output_dir}/freesurfer"
 mkdir -p "${input_dir}/formatted"
-
-# so it temporarily goes to directory of your choice
 export SUBJECTS_DIR="${output_dir}/freesurfer"
 
+# format input files to .mgz and ensure proper orientation
 for subject_file in "$input_dir"/*.nii.gz; do 
     subject_name=$(basename "$subject_file" .nii.gz)
-    img="$subject_file"
+    formatted_img="${input_dir}/formatted/${subject_name}.mgz"
+    mri_convert --in_orientation LIA  --out_orientation RAS "$subject_file" "$formatted_img"
+done
 
-    # expected orientation 
-    orient="${input_dir}/formatted/${subject_name}.mgz"
-    mri_convert "$img" "$orient"
+# nu correction didnt perform well, so we just want orig.mgz 
+ls "${input_dir}/formatted/"*.mgz | parallel --jobs 6 \
+ recon-all -motioncor -hires -i {} -s {/.} 
 
-    # nuintensity correction makes images too bright
-    mri="${output_dir}/freesurfer/${subject_name}/mri"
+# replace nu.mgz with orig.mgz for each subject to skip nu correction
+for subject_dir in "${SUBJECTS_DIR}"/*; do
+    mri="${subject_dir}/mri"
     cp "${mri}/orig.mgz" "${mri}/nu.mgz"
-    
-    # to start freesurfer process
-    recon-all -motioncor  -s "$subject_name" -i "${input_dir}/formatted/${subject_name}.mgz" -hires
+done
 
-    # need to check if i can move this up and replace it with mri_convert
-    mri_convert --in_orientation LIA --out_orientation RAS "${mri}/orig.mgz" "${mri}/orig.mgz"
+# skip skull stripping and intensity correction
+ls "${SUBJECTS_DIR}" | parallel --jobs 6 \
+ recon-all -s {} -autorecon1 -hires -notal-check -noskullstrip -nonuintensitycor
 
-    # already performed skull stripping
+# already performed skull stripping
+for subject_dir in "${SUBJECTS_DIR}"/*; do
+    mri="${subject_dir}/mri"
     cp "${mri}/T1.mgz" "${mri}/brainmask.mgz"
+done
 
-    recon-all -s "$subject_name" -autorecon1 -notal-check -hires -noskullstrip -nonuintensitycor
-    recon-all -s "$subject_name" -autorecon2 -normneck -noskull-lta -hires
+# already extracted brain
+ls "${SUBJECTS_DIR}" | parallel --jobs 6 \
+ recon-all -s {} -autorecon2 -normneck -noskull-lta -hires
 
-done 
+echo "Processing complete for all subjects!"

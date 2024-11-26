@@ -9,7 +9,7 @@ output_dir = sys.argv[2]
 orig = nib.load(filename)
 I = orig.get_fdata()
 
-subject_filename = os.path.basename(filename)
+subject_filename = os.path.basename(filename).replace("_bias.nii.gz", "_norm.nii.gz")
 output_file_path = os.path.join(output_dir, subject_filename)
 
 # scale to 8-bit image pixel range
