@@ -60,7 +60,6 @@ for subject_file in "${input_dir}"/*.nii; do
 
 done
 
-
 # optional cleanup of directories 
 if [ "$clean_up" -eq 1 ]; then
     echo "cleaning up folders..."
