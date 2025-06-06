@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib import colorbar as cbar
 from nilearn import plotting
+import nibabel as nib
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from brainspace.gradient import GradientMaps
@@ -238,32 +239,32 @@ def dendrogram(df, save=False, savename="dendrogram.png"):
 
     plt.show()
 
-def rs_plt(df, embedding1, range="effective_range", sill="sill", ax=None, save_path=None, show=True):
-    """ function that creates a scatterplot using range and sill, whilst mapping the principal gradient 
-    to their respective regions where blue maps to unimodal and red maps to transmodal regions"""
-
-    # red-white color map
+def rs_plt(df, embedding, range="effective_range", sill="sill", ax=None):
+    """plot a scatterplot of range vs sill with colors mapped to the principal connectivity gradient (PC1)"""
+    # colormap function, red-blue mapping
     red_blue_cmap = create_colormap()
 
-    # mapping the connectivity gradient (unimodal-transmodal) to the df 
+    # map principal gradient values
     gradient = df.copy()
-    gradient['PC1'] = gradient['regions'].map(embedding1.set_index('regions')['PC1'])
+    gradient['PC1'] = gradient['regions'].map(embedding.set_index('regions')['PC1'])
     pc1_values = gradient["PC1"].values
 
-    # normalise the values 
+    # normalise and colormap
     vlim = np.max(np.abs(pc1_values))
     norm = Normalize(vmin=-vlim, vmax=vlim)
     colors_mapped = red_blue_cmap(norm(pc1_values))
 
-    # sort for plotting
+    # sort for aesthetics
     sorted_idx = np.argsort(pc1_values)
     x_sorted = gradient[range].values[sorted_idx]
     y_sorted = gradient[sill].values[sorted_idx]
     colors_sorted = colors_mapped[sorted_idx]
 
-    # plot
+    # setup axis
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 5), dpi=300)
+    else:
+        fig = None  # only return fig if created here
 
     ax.scatter(x_sorted, y_sorted, c=colors_sorted,
                edgecolor='k', linewidth=0.3, alpha=0.9, s=30)
@@ -275,7 +276,7 @@ def rs_plt(df, embedding1, range="effective_range", sill="sill", ax=None, save_p
     cbar.set_label("connectivity gradient", fontsize=11)
     cbar.ax.tick_params(labelsize=9)
 
-    # setting up the exes
+    # axis limits with buffer
     buffer_x = 0.05 * (gradient[range].max() - gradient[range].min())
     buffer_y = 0.05 * (gradient[sill].max() - gradient[sill].min())
     ax.set_xlim(gradient[range].min() - buffer_x, gradient[range].max() + buffer_x)
@@ -283,22 +284,25 @@ def rs_plt(df, embedding1, range="effective_range", sill="sill", ax=None, save_p
 
     ax.set_xlabel("Range", fontsize=12)
     ax.set_ylabel("Sill", fontsize=12)
-    # ax.set_title("Regions colored by connectivity gradient", fontsize=13, weight='bold')
     ax.set_facecolor('white')
     ax.tick_params(axis='both', labelsize=10)
     ax.grid(False)
 
-    # plt the figures next to each other 
+    return fig, ax
+
+
+def rs_panel_plot(df_left, embedding_left, df_right, embedding_right, range="effective_range", sill="sill", save_path=None, show=True):
+    """plot left and right hemisphere scatterplots side by side."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5), dpi=300)
 
-    rs_plt(axes[0], df_left, embedding_left, range, sill)
-    rs_plt(axes[1], df_right, embedding_right, range, sill)
+    # calls the scatterplot function for each hemisphere
+    rs_plt(df_left, embedding_left, range, sill, ax=axes[0])
+    rs_plt(df_right, embedding_right, range, sill, ax=axes[1])
 
     plt.tight_layout()
-
+    # saves the scatterplot
     if save_path:
         fig.savefig(save_path, dpi=600, bbox_inches='tight')
-
     if show:
         plt.show()
 
@@ -344,27 +348,45 @@ def box_grad(df, pc="PCO"):
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.show()
 
-def trend_(df_connection, distance_mat, feature="effective_range", hemi=None):
-    """function to test correlation between mean distance and feature from primary regions"""
+d
+def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=None, path=, save=True):
+    """function to test correlation between mean distance and feature from primary regions, 
+    calculate distance to each primary region, then average at parent level so that each region has an equal contribution"""
 
-    # list of parent primary regions
-    primary = ["postcentral", "precentral", "transversetemporal", "pericalcarine"]
-    pattern = '|'.join(primary)
+    # define the primary region classes
+    primary_classes = {
+        "V1": "pericalcarine",
+        "S1": "postcentral",
+        "M1": "precentral",
+        "A1": "transversetemporal"
+    }
 
-    # retrieve all the distances from primary regions
-    primary_distances = distance_mat[distance_mat.index.to_series().str.contains(pattern, case=False, na=False)]
+    # store mean distances from each primary class
+    primary_class_means = []
 
-    # take mean to all primary regions
-    min_distance_to_primary = primary_distances.mean(axis=0).reset_index()
-    min_distance_to_primary.columns = ["regions", "mean_distance"]
+    # iterate through all primary regions
+    for class_name, pattern in primary_classes.items():
+        # get distances from all subregions matching the current primary region class
+        mask = distance_mat.index.to_series().str.contains(pattern, case=False, na=False)
+        class_dists = distance_mat[mask]
+        
+        # mean distance to this class, across all its subregions
+        class_mean = class_dists.mean(axis=0)
+        primary_class_means.append(class_mean)
+
+    # combine class-wise distances and average them (equal weighting of classes)
+    mean_distance_to_primary = pd.concat(primary_class_means, axis=1).mean(axis=1).reset_index()
+    mean_distance_to_primary.columns = ["regions", "mean_distance"]
 
     # add mean distance to main df
-    trend = df_connection.set_index("regions").join(min_distance_to_primary.set_index("regions"))
+    trend = df_connection.set_index("regions").join(mean_distance_to_primary.set_index("regions"))
 
     # remove primary regions to avoid self-comparison
     final = trend[~trend.index.to_series().str.contains(pattern, case=False, na=False)]
 
     # get the correlation and p-value
+    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
+     # get the correlation and p-value
     r_val, p_val = pearsonr(final["mean_distance"], final[feature])
 
     # plot
@@ -414,7 +436,100 @@ def trend_(df_connection, distance_mat, feature="effective_range", hemi=None):
     g.ax_joint.grid(False)
     g.ax_marg_x.grid(False)
     g.ax_marg_y.grid(False)
-    g.fig.savefig(f"/Users/gabrielhaw/Connectome/project_images/distance_vs_{feature}_{hemi}.png", dpi=600, bbox_inches="tight")
+    if save: 
+        g.fig.savefig(f"
+def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=None, save=True):
+    """function to test correlation between mean distance and feature from primary regions, 
+    calculate distance to each primary region, then average at parent level so that each region has an equal contribution"""
+
+    # define the primary region classes
+    primary_classes = {
+        "V1": "pericalcarine",
+        "S1": "postcentral",
+        "M1": "precentral",
+        "A1": "transversetemporal"
+    }
+
+    # store mean distances from each primary class
+    primary_class_means = []
+
+    # iterate through all primary regions
+    for class_name, pattern in primary_classes.items():
+        # get distances from all subregions matching the current primary region class
+        mask = distance_mat.index.to_series().str.contains(pattern, case=False, na=False)
+        class_dists = distance_mat[mask]
+        
+        # mean distance to this class, across all its subregions
+        class_mean = class_dists.mean(axis=0)
+        primary_class_means.append(class_mean)
+
+    # combine class-wise distances and average them (equal weighting of classes)
+    mean_distance_to_primary = pd.concat(primary_class_means, axis=1).mean(axis=1).reset_index()
+    mean_distance_to_primary.columns = ["regions", "mean_distance"]
+
+
+    # add mean distance to main df
+    trend = df_connection.set_index("regions").join(mean_distance_to_primary.set_index("regions"))
+
+    # remove primary regions to avoid self-comparison
+    final = trend[~trend.index.to_series().str.contains(pattern, case=False, na=False)]
+
+    # get the correlation and p-value
+    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
+     # get the correlation and p-value
+    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
+
+    # plot
+    g = sns.jointplot(
+        data=final,
+        x="mean_distance",
+        y=feature,
+        kind="reg",
+        scatter_kws={'color': 'red', 's': 30, 'alpha': 0.5},
+        line_kws={'color': 'black'}
+    )
+    # adapative axes label 
+    if feature == "sill": 
+        x = "Sill (peak absolute connectivity)"
+    elif feature == "effective_range": 
+        x = "Range (mm)"
+
+    # change axis labels 
+    g.set_axis_labels("Mean distance from all primary regions (mm)", x, fontsize=12)
+
+    # annotate with r and p
+    g.ax_joint.annotate(
+        f"$r$ = {r_val:.2f}, $p$ = {p_val:.3g}",
+        xy=(0.05, 0.95),
+        xycoords='axes fraction',
+        ha='left', va='top',
+        fontsize=12
+    )
+
+    # change the colours of the bars and KDE lines
+    for patch in g.ax_marg_x.patches:
+        patch.set_facecolor("lightgray")
+        patch.set_edgecolor("white")
+
+    for patch in g.ax_marg_y.patches:
+        patch.set_facecolor("lightgray")
+        patch.set_edgecolor("white")
+    
+    for line in g.ax_marg_x.lines:
+        line.set_color("lightgray")
+
+    for line in g.ax_marg_y.lines:
+        line.set_color("lightgray")
+
+    # save in high-resolution
+    plt.tight_layout()
+    g.ax_joint.grid(False)
+    g.ax_marg_x.grid(False)
+    g.ax_marg_y.grid(False)
+    if save: 
+        g.fig.savefig(f"{path}distance_vs_{feature}_{hemi}.png", dpi=600, bbox_inches="tight")
+    # show plot
+    plt.show()distance_vs_{feature}_{hemi}.png", dpi=600, bbox_inches="tight")
     # show plot
     plt.show()
 
@@ -443,7 +558,7 @@ def map_surf_values_from_annot(annot_path, region_values, label_col="regions", v
     return surf_map
 
 
-def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax, label='Value', output_file=None, dpi=600):
+def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax, label='Value', output_file=None, dpi=600, hemi="left"):
     """ plot lateral and medial views of the left hemisphere with a red-blue diverging colorbar."""
     # create custom red-white-blue diverging colormap
     n_colors = 1000
