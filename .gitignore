@@ -2,6 +2,19 @@
 .DS_Store
 **/.DS_Store
 
-# Python cache and compiled files
+# Python cache
 __pycache__/
 *.py[cod]
+
+# VS Code settings
+.vscode/
+
+# Virtual environments
+venv/
+.venv/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# OS-specific
+.DS_Store
