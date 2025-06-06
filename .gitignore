@@ -19,6 +19,4 @@ venv/
 # OS-specific
 .DS_Store
 
-# .gitignore
-.gitignore
 
