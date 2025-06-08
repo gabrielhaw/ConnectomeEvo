@@ -5,10 +5,9 @@ Master's thesis repo, where I investigate how structural connectivity reflects e
 ## 📚 Table of Contents
 
 - [Overview](#overview)
-- [Figures](#figure-example)
+- [Figures](#figures)
 
-
-## 🧬 Overview
+## Overview
 
 This thesis explores the spatial organisation of structural connectivity in the mammalian cortex. Using human data to tests whether the layout of cortical connections reflect evolutionary constraints tied to sensory anchors.
 
