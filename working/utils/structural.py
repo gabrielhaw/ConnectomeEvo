@@ -99,7 +99,7 @@ def fcn_group_bins(adj,dist,nbins):
     #  W_bin(i,j) assign 1 to the top 'top_idx' most consistent edges in this distance bin
     W_bin[I[0][top_idx], I[1][top_idx]] = 1
 
-    # symmetrize and set diagonal to 0 
+    # symmetrise and set diagonal to 0 
     Gc = W_bin + W_bin.T
     np.fill_diagonal(Gc, 0)
     G = G + G.T
@@ -268,10 +268,10 @@ def global_variogram(x, y, sigma=1, n_bins=40, binmethod="quantile", plot=True, 
 
 
 def variogram(dist, diss, sigma=3, n_bins=30, binmethod="uniform", plot=False): 
-    """compute region based variograms, telling us how connection densities decay across
+    """ compute region based variograms, telling us how connection densities decay across
     regions. 
     sill: tells us how connection densities vary at greater distances across regions.
-    range: at what distance, does connection loss stabilize"""
+    range: at what distance, does connection loss stabilise """
 
     # output directory for images 
     output_dir = "/Users/gabrielhaw/Connectome/working/variograms"

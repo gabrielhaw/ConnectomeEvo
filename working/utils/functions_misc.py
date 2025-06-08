@@ -1,5 +1,6 @@
-##### functions to test relationships between regional similarity and distance ######
+import random
 import numpy as np
+from scipy import stats
 import pandas as pd  
 import seaborn as sns 
 from scipy.stats import zscore
@@ -12,6 +13,7 @@ from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from brainspace.gradient import GradientMaps
 from matplotlib.cm import ScalarMappable
+from nilearn.datasets import load_fsaverage, load_fsaverage_data
 from sklearn.preprocessing import StandardScaler, QuantileTransformer
 from matplotlib.colors import Normalize, LinearSegmentedColormap
 
@@ -44,6 +46,7 @@ def gradient_(df, gamma=0.01, sparsity=0, kernel=None, n_components = 10, approa
         gradient_zscore = pd.concat([data[["regions"]], gradient_zscore], axis=1)
 
         return gradient_zscore
+
 
 
 def plot_effective_connection_length(sc, dist_mat, output_csv="data.csv"):
@@ -81,6 +84,8 @@ def plot_effective_connection_length(sc, dist_mat, output_csv="data.csv"):
     df.to_csv(output_csv, index=False)
     
     return df, summary_df
+
+
 
 def sigma_(df,n=1.1, axes=None):
     """function to plot how accuracy metrics change with sigma to find
@@ -127,6 +132,8 @@ def sigma_(df,n=1.1, axes=None):
 
     return axes
 
+
+
 def box_grad(df, pc="PCO"):
     """ function to plot the gradient scores, averaged for each parent region """
 
@@ -167,6 +174,7 @@ def box_grad(df, pc="PCO"):
     plt.show()
 
 
+
 def preprocess_data(df, embedding, scaler):
     """ helper function that allows us to map the principal gradient colors
     to their respective regions and then scale the features for dendogram analysis so that
@@ -180,6 +188,8 @@ def preprocess_data(df, embedding, scaler):
 
     return df
 
+
+
 def create_colormap():
     """creates a color mapping to map the embedding scores along a blue (unimodal), 
     red (transmodal) axis"""
@@ -191,7 +201,9 @@ def create_colormap():
     colors = np.vstack((blues[::-1], white, reds[::-1]))
     return LinearSegmentedColormap.from_list('RedBlu', colors)
 
-def dendrogram(df, save=False, savename="dendrogram.png"):
+
+
+def dendrogram(df, path=None, save=False, plot_show=False, savename="dendrogram.png"):
     """ function that performs agglomerative clustering using ward method to 
     minimise within cluster variance """
 
@@ -235,9 +247,15 @@ def dendrogram(df, save=False, savename="dendrogram.png"):
     # for adjusting the position of the plots 
     g.fig.subplots_adjust(left=0.54, right=0.91, top=0.82, bottom=0.05)
     if save:
-        g.savefig(savename, dpi=300, bbox_inches='tight')
+        g.savefig(f"{path}_{savename}", dpi=300, bbox_inches='tight')
 
-    plt.show()
+    if plot_show:
+        plt.show()
+    # clustermap shows the figure regardless
+    else:
+        plt.close(g.fig)
+
+
 
 def rs_plt(df, embedding, range="effective_range", sill="sill", ax=None):
     """plot a scatterplot of range vs sill with colors mapped to the principal connectivity gradient (PC1)"""
@@ -291,6 +309,7 @@ def rs_plt(df, embedding, range="effective_range", sill="sill", ax=None):
     return fig, ax
 
 
+
 def rs_panel_plot(df_left, embedding_left, df_right, embedding_right, range="effective_range", sill="sill", save_path=None, show=True):
     """plot left and right hemisphere scatterplots side by side."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5), dpi=300)
@@ -307,6 +326,7 @@ def rs_panel_plot(df_left, embedding_left, df_right, embedding_right, range="eff
         plt.show()
 
     return fig, axes
+
 
 
 def box_grad(df, pc="PCO"):
@@ -348,8 +368,9 @@ def box_grad(df, pc="PCO"):
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.show()
 
-d
-def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=None, path=, save=True):
+
+
+def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=None, path=None, save=True, plot_show=False):
     """function to test correlation between mean distance and feature from primary regions, 
     calculate distance to each primary region, then average at parent level so that each region has an equal contribution"""
 
@@ -365,120 +386,30 @@ def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=N
     primary_class_means = []
 
     # iterate through all primary regions
-    for class_name, pattern in primary_classes.items():
-        # get distances from all subregions matching the current primary region class
+    for pattern in primary_classes.values():
+        # create a mask to map to all primary regions
         mask = distance_mat.index.to_series().str.contains(pattern, case=False, na=False)
+        # get the distances
         class_dists = distance_mat[mask]
-        
-        # mean distance to this class, across all its subregions
+        # get the mean for each subregions
         class_mean = class_dists.mean(axis=0)
+        # add the mean
         primary_class_means.append(class_mean)
 
-    # combine class-wise distances and average them (equal weighting of classes)
+    # get all the mean distances for each primary region 
     mean_distance_to_primary = pd.concat(primary_class_means, axis=1).mean(axis=1).reset_index()
     mean_distance_to_primary.columns = ["regions", "mean_distance"]
 
-    # add mean distance to main df
+    # add the correct regions
     trend = df_connection.set_index("regions").join(mean_distance_to_primary.set_index("regions"))
 
-    # remove primary regions to avoid self-comparison
-    final = trend[~trend.index.to_series().str.contains(pattern, case=False, na=False)]
+    # remove all primary regions
+    combined_pattern = '|'.join(primary_classes.values())
+    final = trend[~trend.index.to_series().str.contains(combined_pattern, case=False, na=False)]
 
-    # get the correlation and p-value
+    # correlation
     r_val, p_val = pearsonr(final["mean_distance"], final[feature])
-     # get the correlation and p-value
-    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
-
-    # plot
-    g = sns.jointplot(
-        data=final,
-        x="mean_distance",
-        y=feature,
-        kind="reg",
-        scatter_kws={'color': 'red', 's': 30, 'alpha': 0.5},
-        line_kws={'color': 'black'}
-    )
-    # adapative axes label 
-    if feature == "sill": 
-        x = "Sill (peak absolute connectivity)"
-    elif feature == "effective_range": 
-        x = "Range (mm)"
-
-    # change axis labels 
-    g.set_axis_labels("Mean distance from all primary regions (mm)", x, fontsize=12)
-
-    # annotate with r and p
-    g.ax_joint.annotate(
-        f"$r$ = {r_val:.2f}, $p$ = {p_val:.3g}",
-        xy=(0.05, 0.95),
-        xycoords='axes fraction',
-        ha='left', va='top',
-        fontsize=12
-    )
-
-    # change the colours of the bars and KDE lines
-    for patch in g.ax_marg_x.patches:
-        patch.set_facecolor("lightgray")
-        patch.set_edgecolor("white")
-
-    for patch in g.ax_marg_y.patches:
-        patch.set_facecolor("lightgray")
-        patch.set_edgecolor("white")
     
-    for line in g.ax_marg_x.lines:
-        line.set_color("lightgray")
-
-    for line in g.ax_marg_y.lines:
-        line.set_color("lightgray")
-
-    # save in high-resolution
-    plt.tight_layout()
-    g.ax_joint.grid(False)
-    g.ax_marg_x.grid(False)
-    g.ax_marg_y.grid(False)
-    if save: 
-        g.fig.savefig(f"
-def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=None, save=True):
-    """function to test correlation between mean distance and feature from primary regions, 
-    calculate distance to each primary region, then average at parent level so that each region has an equal contribution"""
-
-    # define the primary region classes
-    primary_classes = {
-        "V1": "pericalcarine",
-        "S1": "postcentral",
-        "M1": "precentral",
-        "A1": "transversetemporal"
-    }
-
-    # store mean distances from each primary class
-    primary_class_means = []
-
-    # iterate through all primary regions
-    for class_name, pattern in primary_classes.items():
-        # get distances from all subregions matching the current primary region class
-        mask = distance_mat.index.to_series().str.contains(pattern, case=False, na=False)
-        class_dists = distance_mat[mask]
-        
-        # mean distance to this class, across all its subregions
-        class_mean = class_dists.mean(axis=0)
-        primary_class_means.append(class_mean)
-
-    # combine class-wise distances and average them (equal weighting of classes)
-    mean_distance_to_primary = pd.concat(primary_class_means, axis=1).mean(axis=1).reset_index()
-    mean_distance_to_primary.columns = ["regions", "mean_distance"]
-
-
-    # add mean distance to main df
-    trend = df_connection.set_index("regions").join(mean_distance_to_primary.set_index("regions"))
-
-    # remove primary regions to avoid self-comparison
-    final = trend[~trend.index.to_series().str.contains(pattern, case=False, na=False)]
-
-    # get the correlation and p-value
-    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
-     # get the correlation and p-value
-    r_val, p_val = pearsonr(final["mean_distance"], final[feature])
-
     # plot
     g = sns.jointplot(
         data=final,
@@ -490,12 +421,12 @@ def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=N
     )
     # adapative axes label 
     if feature == "sill": 
-        x = "Sill (peak absolute connectivity)"
+        y_label = "Sill (peak absolute connectivity)"
     elif feature == "effective_range": 
-        x = "Range (mm)"
+        y_label = "Range (mm)"
 
     # change axis labels 
-    g.set_axis_labels("Mean distance from all primary regions (mm)", x, fontsize=12)
+    g.set_axis_labels("Mean distance from all primary regions (mm)", y_label, fontsize=12)
 
     # annotate with r and p
     g.ax_joint.annotate(
@@ -529,9 +460,14 @@ def trend_primary(df_connection, distance_mat, feature="effective_range", hemi=N
     if save: 
         g.fig.savefig(f"{path}distance_vs_{feature}_{hemi}.png", dpi=600, bbox_inches="tight")
     # show plot
-    plt.show()distance_vs_{feature}_{hemi}.png", dpi=600, bbox_inches="tight")
-    # show plot
-    plt.show()
+    if plot_show:
+        plt.show()
+
+    else:
+        plt.close(g.fig)
+
+    return r_val, p_val
+
 
 
 def map_surf_values_from_annot(annot_path, region_values, label_col="regions", value_col="sill"):
@@ -558,8 +494,10 @@ def map_surf_values_from_annot(annot_path, region_values, label_col="regions", v
     return surf_map
 
 
+
 def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax, label='Value', output_file=None, dpi=600, hemi="left"):
     """ plot lateral and medial views of the left hemisphere with a red-blue diverging colorbar."""
+
     # create custom red-white-blue diverging colormap
     n_colors = 1000
     reds = plt.cm.Reds(np.linspace(0.9, 0.3, n_colors))
@@ -578,7 +516,7 @@ def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax
             surf_mesh=fsaverage.inflated,
             surf_map=surf_map,
             bg_map=sulc_map,
-            hemi='left',
+            hemi=hemi,
             view=view,
             cmap=red_blue_cmap,
             vmin=vmin,
@@ -607,6 +545,7 @@ def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax
         plt.show()
 
 
+
 def rank_regions_table(df,top_n=10,region_col="regions",range_col="effective_range",sill_col="sill",high_range=True,high_sill=False):
     """ rank regions by sill and range with control over whether high/low values are better """
 
@@ -625,3 +564,106 @@ def rank_regions_table(df,top_n=10,region_col="regions",range_col="effective_ran
     result = ranked.sort_values("combined_rank").head(top_n)
 
     return result[[region_col, range_col, sill_col, "combined_rank"]]
+
+
+# randomly shuffling lables to see whether or not similar trends were observed for different regions
+# assessing trends with distance from primary regions
+def trend_perma(df_connection, distance_mat, feature="effective_range", perms_n=100000):
+    """ permutation test: compute the correlation between distance from permuted anchor regions
+    and a target feature (e.g., effective_range or sill) over N permutations.
+    """
+
+    # get available region labels (excluding real anchors), removing suffix
+    all_labels = set(label.split('_')[0] for label in df_connection["regions"])
+
+    # exclude primary regions from the analysis
+    excluded = {"postcentral", "precentral", "transversetemporal", "pericalcarine"}
+
+    # updated labels
+    available_labels = list(all_labels - excluded)
+    
+    # list to store r-vals
+    perma_list = []
+
+    random.seed(42) 
+    # generate the same permuted list for comparability across features + hemisphere
+    permuted_anchor_sets = [random.sample(available_labels, 4) for _ in range(perms_n)]
+
+    # permutations
+    for anchors in permuted_anchor_sets:
+        # use fixed anchors if provided, else draw new ones
+        class_means = []
+
+        # iterate through parent classes
+        for anchor in anchors:
+
+            # find all rows in distance matrix matching the anchor label
+            mask = distance_mat.index.to_series().str.contains(anchor, case=False, na=False)
+            # get distances class anchors to target, return distances n(regions)
+            dists = distance_mat[mask]
+            # compute average of class anchors to target
+            class_means.append(dists.mean(axis=0))
+
+        # average distances across the 4 anchor classes
+        mean_dist = pd.concat(class_means, axis=1).mean(axis=1).reset_index()
+        mean_dist.columns = ["regions", "mean_distance"]
+
+        # join with main dataframe
+        merged = df_connection.set_index("regions").join(mean_dist.set_index("regions"))
+
+        # remove anchor regions from result
+        pattern = '|'.join(anchors)
+        filtered = merged[~merged.index.to_series().str.contains(pattern, case=False, na=False)]
+
+        # compute correlation
+        r, _ = pearsonr(filtered["mean_distance"], filtered[feature])
+        perma_list.append(r)
+
+    return perma_list
+
+
+
+def perma_helper(left, left_dist, right, right_dist, perms_n=100000): 
+    """function to assist in the running of the permutation tests, so that things arent cluttered"""
+
+    # getting the observed r-vals with which to test against
+    r_val_erl, _ = trend_primary(left, left_dist, feature="effective_range", hemi="left", path="/Users/gabrielhaw/Connectome/project_images/", save=True, plot_show=False)
+    r_val_sil, _ = trend_primary(left, left_dist, feature="sill", hemi="left", path="/Users/gabrielhaw/Connectome/project_images/", save=True, plot_show=False)
+
+    # right-hemi
+    r_val_err, _ = trend_primary(right, right_dist, feature="effective_range", hemi="right", path="/Users/gabrielhaw/Connectome/project_images/", save=True, plot_show=False)
+    r_val_sir, _ = trend_primary(right, right_dist, feature="sill", hemi="right", path="/Users/gabrielhaw/Connectome/project_images/", save=True, plot_show=False)
+
+    # observed correlations for primary regions
+    observed = {
+        ("left", "effective_range"): r_val_erl,
+        ("left", "sill"): r_val_sil,
+        ("right", "effective_range"): r_val_err,
+        ("right", "sill"): r_val_sir
+    }
+
+    # result list
+    results = []
+
+    # loop through features and hemispheres
+    for hemi, df_conn, dist_mat in [("left", left, left_dist), ("right", right, right_dist)]:
+        for feat in ["effective_range", "sill"]:
+            print(f"Running permutation test: {hemi}, {feat}")
+            observed_r = observed[(hemi, feat)]
+
+            trend = trend_perma(df_conn, dist_mat, feature=feat, perms_n=100000)
+            perma_array = np.array(trend)
+
+            # two-tailed p-value
+            p_val = (np.sum(np.abs(perma_array) >= abs(observed_r)) + 1) / (len(perma_array) + 1)
+
+            results.append({
+                "hemisphere": hemi,
+                "feature": feat,
+                "observed_r": observed_r,
+                "p_val": p_val
+            })
+
+    # create final DataFrame
+    df_perma = pd.DataFrame(results)
+    return df_perma
