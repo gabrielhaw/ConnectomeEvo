@@ -13,7 +13,7 @@ This thesis explores the spatial organisation of structural connectivity in the 
 
 Together, the findings suggest that:
 
-Unimodal regions (e.g., primary sensory and motor cortices) are characterized by dense, short-range connections.
+Unimodal regions (e.g., primary sensory and motor cortices) are characterised by strong, short-range connections.
 Transmodal regions (e.g., association cortex) exhibit more distributed, long-range connectivity patterns.
 These patterns support a gradient-based organisation, where the distance from primary sensory areas plays a crucial role in shaping the distribution of long-range connections across the cortex (Buckner et al., 2013; Margulies et al., 2016; Oligschläger et al., 2019).
 
