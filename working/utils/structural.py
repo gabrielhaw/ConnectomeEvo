@@ -151,7 +151,7 @@ def binning(xvals, yvals, n_bins, method='quantile'):
 
     # create dataframe with the bin centers, average streamline densities and counts per bin
     df = pd.DataFrame({'dist': xvals.flatten(), 'y': yvals, 'bins': bin_indx})
-    # aggregates bins based on mean distance and mean decay values
+    # aggregates bins based on mean distance and mean deviation values
     fd = df.groupby('bins').agg(
         bin_centers=('dist', 'mean'),
         ybin=('y', 'mean'),
@@ -170,11 +170,11 @@ def global_variogram(x, y, sigma=1, n_bins=40, binmethod="quantile", plot=True, 
     
     # create the upper triangle mask
     mask = np.triu(np.ones_like(x, dtype=bool), k=1)
-    # drop self-distances/decay values
+    # drop self-distances/deviation values
     xvals = np.asarray(x)[mask]
     yvals = np.asarray(y)[mask]
 
-    # transform into connection decay values
+    # transform into connection deviation values
     yvals = yvals.max() - yvals
 
     # order by distance
@@ -245,7 +245,7 @@ def global_variogram(x, y, sigma=1, n_bins=40, binmethod="quantile", plot=True, 
     # axes titles, better visuals
     if plot:
         ax.set_xlabel('Distance (mm)', fontsize=8)
-        ax.set_ylabel('Connection strength decay', fontsize=8)
+        ax.set_ylabel('Connection strength deviation', fontsize=8)
         ax.set_title('Variogram Model', fontsize=9)
 
         ax.tick_params(axis='both', which='major', labelsize=8)
@@ -268,7 +268,7 @@ def global_variogram(x, y, sigma=1, n_bins=40, binmethod="quantile", plot=True, 
 
 
 def variogram(dist, diss, sigma=3, n_bins=30, binmethod="uniform", plot=False): 
-    """ compute region based variograms, telling us how connection densities decay across
+    """ compute region based variograms, telling us how connection densities deviate across
     regions. 
     sill: tells us how connection densities vary at greater distances across regions.
     range: at what distance, does connection loss stabilise """
@@ -296,10 +296,14 @@ def variogram(dist, diss, sigma=3, n_bins=30, binmethod="uniform", plot=False):
         y_sorted = yvals[idx]
 
         # gaussian smoothing for noisey bins, truncate to reduce the number of neighbours
-        y_smooth = gaussian_filter1d(y_sorted, sigma=sigma, truncate=2)
-        
+        if sigma == 0: 
+                y_smooth = y_sorted
+        else: 
+            y_smooth = gaussian_filter1d(y_sorted, sigma=sigma, truncate=2)
+
         # binning and averaging of streamline densities
         bin_centers, gamma, _ = binning(x_sorted, y_smooth, n_bins, method=binmethod)
+
         # plotting the unsmoothed values to visualise effect of smoothing 
         _, unsmoothed, _ = binning(x_sorted, y_sorted, n_bins, method=binmethod)
 
@@ -321,7 +325,7 @@ def variogram(dist, diss, sigma=3, n_bins=30, binmethod="uniform", plot=False):
             # fit these values to the model for plotting
             fit_vals = model.variogram(h_vals)
 
-            # estimated as the asymptote or maximum decay value predicted by our model 
+            # estimated as the asymptote or maximum deviation value predicted by our model 
             sill_est = model.sill
         
             # range; determined as the distance at which we have reached 95% of the sill estimate
@@ -345,9 +349,9 @@ def variogram(dist, diss, sigma=3, n_bins=30, binmethod="uniform", plot=False):
                 plt.plot(h_vals, fit_vals, label=f'Fit (range={effective_range:.2f}, sill={sill_est:.2f})')
                 plt.axhline(sill_est, color='orange', linestyle='--', label='Sill')
                 plt.axvline(effective_range, color='red', linestyle='--', label='Range')
-                plt.plot(bin_centers, unsmoothed, 'o', color='blue', alpha=0.3, label='Residuals')
+                plt.plot(bin_centers, unsmoothed, 'o', color='blue', alpha=0.3, label='Unsmoothed')
                 plt.xlabel('Distance')
-                plt.ylabel('Connection strength decay')
+                plt.ylabel('Connection strength deviation')
                 plt.title(f'Variogram Fit - {seed}')
                 plt.legend(frameon=True,
                     fontsize=7,
@@ -387,14 +391,14 @@ def evaluate_sigma(dist, diss, n_bins=30, binmethod="uniform", plot=False, n=20)
         sigma_df = []
         # iterate through each region
         for seed in common.index:
-            # drop self-distances/decay values
+            # drop self-distances/deviation values
             xvals = dist.loc[seed].drop(seed).values.astype(float) 
             yvals = common.loc[seed].drop(seed).values.astype(float)
         
-            # transform into connection decay values
+            # transform into connection deviation values
             yvals = yvals.max() - yvals
 
-            # sort values so that distance and decay match 
+            # sort values so that distance and deviation match 
             idx = np.argsort(xvals)
             x_sorted = xvals[idx]
             y_sorted = yvals[idx]
@@ -425,7 +429,7 @@ def evaluate_sigma(dist, diss, n_bins=30, binmethod="uniform", plot=False, n=20)
                 # fit these values to the model for plotting
                 fit_vals = model.variogram(h_vals)
 
-                # estimated as the asymptote or maximum decay value predicted by our model 
+                # estimated as the asymptote or maximum deviation value predicted by our model 
                 sill_est = model.sill
             
                 # range; determined as the distance at which we have reached 95% of the sill estimate

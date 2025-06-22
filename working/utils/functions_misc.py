@@ -9,7 +9,7 @@ from matplotlib import colors as mcolors
 from matplotlib import colorbar as cbar
 from nilearn import plotting
 import nibabel as nib
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, spearmanr
 import matplotlib.pyplot as plt
 from brainspace.gradient import GradientMaps
 from matplotlib.cm import ScalarMappable
@@ -546,7 +546,7 @@ def plot_left_hemisphere_with_colorbar(surf_map, fsaverage, sulc_map, vmin, vmax
 
 
 
-def rank_regions_table(df,top_n=10,region_col="regions",range_col="effective_range",sill_col="sill",high_range=True,high_sill=False):
+def rank_regions_table(df,top_n=10,region_col="regions", range_col="effective_range", sill_col="sill",high_range=True,high_sill=False):
     """ rank regions by sill and range with control over whether high/low values are better """
 
     ranked = df.copy()
@@ -616,7 +616,7 @@ def trend_perma(df_connection, distance_mat, feature="effective_range", perms_n=
         filtered = merged[~merged.index.to_series().str.contains(pattern, case=False, na=False)]
 
         # compute correlation
-        r, _ = pearsonr(filtered["mean_distance"], filtered[feature])
+        r, _ = spearmanr(filtered["mean_distance"], filtered[feature])
         perma_list.append(r)
 
     return perma_list
@@ -624,7 +624,7 @@ def trend_perma(df_connection, distance_mat, feature="effective_range", perms_n=
 
 
 def perma_helper(left, left_dist, right, right_dist, perms_n=100000): 
-    """function to assist in the running of the permutation tests, so that things arent cluttered"""
+    """function to assist in the running of the permutation tests for distance from primary sensory region"""
 
     # getting the observed r-vals with which to test against
     r_val_erl, _ = trend_primary(left, left_dist, feature="effective_range", hemi="left", path="/Users/gabrielhaw/Connectome/project_images/", save=True, plot_show=False)
@@ -667,3 +667,73 @@ def perma_helper(left, left_dist, right, right_dist, perms_n=100000):
     # create final DataFrame
     df_perma = pd.DataFrame(results)
     return df_perma
+
+
+def get_primary_region_ranges(left_df, right_df, feature="effective_range"):
+    """extracts mean feature values for primary regions from left and right hemispheres"""
+
+    # define keywords for each primary region
+    primary_keywords = {
+        "postcentral (S1)": "postcentral",
+        "pericalcarine (V1)": "pericalcarine",
+        "transversetemporal (A1)": "transversetemporal",
+        "precentral (M1)": "precentral"
+    }
+
+    # prepare dictionary to hold values
+    data = {"left": [], "right": []}
+
+    # loop through each region keyword and compute mean from both hemispheres
+    for label, keyword in primary_keywords.items():
+        left_vals = left_df[left_df["regions"].astype(str).str.contains(keyword, case=False, na=False)][feature]
+        right_vals = right_df[right_df["regions"].astype(str).str.contains(keyword, case=False, na=False)][feature]
+
+        data["left"].append(left_vals.mean())
+        data["right"].append(right_vals.mean())
+
+    # build final dataframe and round for readability
+    primary_ranges = pd.DataFrame(data, index=primary_keywords.keys()).round(2)
+    return primary_ranges
+
+
+def perma_gradient(embedding_df, features_df, n_perms=100000):
+    """ 
+    joins gradient and features, then performs permutation-based spearman correlation tests
+    between the gradient (PC0) and two structural features: sill and effective_range. 
+    """
+
+    # join on shared index
+    aligned = embedding_df[["PC0"]].join(features_df[["sill", "effective_range"]], how='inner')
+
+    # extract arrays
+    gradient = aligned["PC0"].values
+    sill = aligned["sill"].values
+    range_ = aligned["effective_range"].values
+
+    # compute observed correlations
+    corr_sill = spearmanr(gradient, sill)[0]
+    corr_range = spearmanr(gradient, range_)[0]
+
+    # initialize null distributions
+    null_corr_sill = np.zeros(n_perms)
+    null_corr_range = np.zeros(n_perms)
+
+    # run permutations
+    for i in range(n_perms):
+        null_corr_sill[i] = spearmanr(gradient, np.random.permutation(sill))[0]
+        null_corr_range[i] = spearmanr(gradient, np.random.permutation(range_))[0]
+
+    # compute two-tailed p-values with +1 correction
+    p_sill = (np.sum(np.abs(null_corr_sill) >= np.abs(corr_sill)) + 1) / (n_perms + 1)
+    p_range = (np.sum(np.abs(null_corr_range) >= np.abs(corr_range)) + 1) / (n_perms + 1)
+
+    # print results
+    print(f"Sill vs Gradient: correlation = {corr_sill:.2f}, p = {p_sill:.4g}")
+    print(f"Range vs Gradient: correlation = {corr_range:.2f}, p = {p_range:.4g}")
+
+    return {
+        "correlation_sill": corr_sill,
+        "p_value_sill": p_sill,
+        "correlation_range": corr_range,
+        "p_value_range": p_range
+    }
